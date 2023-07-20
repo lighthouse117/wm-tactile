@@ -4,6 +4,7 @@ import yaml
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import types
+import pprint
 
 from utils.data import ProjectDataset, transform_front, transform_tactile
 from models.autoencoder import VisualTactileAutoencoder
@@ -23,7 +24,6 @@ def main(config):
         config.vae_latent_dim, modality=config.vae_modality, lr=config.vae_lr
     )
     reg = AngleRegressor(config.vae_latent_dim, config.reg_hidden_dim, lr=config.reg_lr)
-
 
     # ===== Train VAE =====
 
@@ -95,9 +95,11 @@ if __name__ == "__main__":
     # load configs from yaml file
     with open("configs/default.yaml", "r") as f:
         config = yaml.safe_load(f)
-        config = types.SimpleNamespace(**config)
+        pprint.pprint(config)
 
     if config.use_wandb:
         wandb.init(project="wm-tactile")
+        wandb.config.update(config)
 
+    config = types.SimpleNamespace(**config)
     main(config)
