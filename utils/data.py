@@ -1,11 +1,31 @@
 from PIL import Image
 import glob
 import os
-import numpy as np
 from torch.utils.data import Dataset
+from torchvision import datasets, transforms, models
 
-from typing import Tuple
-from tqdm import tqdm
+
+transform_front = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.CenterCrop(80),
+        transforms.Normalize(
+            mean=[0.5, 0.5, 0.5],
+            std=[0.5, 0.5, 0.5],
+        ),
+    ]
+)
+
+transform_tactile = transforms.Compose(
+    [
+        transforms.Resize((80, 60)),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.5, 0.5, 0.5],
+            std=[0.5, 0.5, 0.5],
+        ),
+    ]
+)
 
 
 class ProjectDataset(Dataset):

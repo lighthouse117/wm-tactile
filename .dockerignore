@@ -1,0 +1,6 @@
+# Dockerignore
+
+dataset
+wandb
+model.pth
+optimizer.pth

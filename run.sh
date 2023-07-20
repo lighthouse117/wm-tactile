@@ -36,5 +36,6 @@ CONTAINER_NAME="$CONTAINER_NAME$GPU_NUMBER"
 docker run -it --rm --runtime=nvidia --gpus device=$GPU_NUMBER \
     -v ~/wm-tactile:/workspace \
     --ipc=host \
+    -e WANDB_API_KEY=$WANDB_API_KEY \
     --name $CONTAINER_NAME $IMAGE_NAME \
     $CMD

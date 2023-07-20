@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,7 +5,6 @@ import torch.nn.functional as F
 from typing import Tuple
 
 
-# VAEモデルの実装
 class ConvVAE(nn.Module):
     def __init__(self, z_dim: int) -> None:
         super(ConvVAE, self).__init__()
@@ -89,7 +87,34 @@ class ConvVAE(nn.Module):
 
         return KL, -reconstruction
 
+    def get_z(self, x: torch.Tensor) -> torch.Tensor:
+        mu, logvar = self._encoder(x)
+        z = self._sample_z(mu, logvar)
+        return z
+
 
 def torch_log(x: torch.Tensor) -> torch.Tensor:
-    """torch.log(0)によるnanを防ぐ．"""
+    """torch.log(0)によるnanを防ぐ"""
     return torch.log(torch.clamp(x, min=1e-10))
+
+
+class MLP(nn.Module):
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int) -> None:
+        super(MLP, self).__init__()
+
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc4 = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        h1 = F.relu(self.fc1(x))
+        h2 = F.relu(self.fc2(h1))
+        h3 = F.relu(self.fc3(h2))
+        out = self.fc4(h3)
+        return out
+
+    def loss(self, x, target) -> torch.Tensor:
+        y = self.forward(x)
+        loss = nn.MSELoss()(y, target)
+        return loss
