@@ -1,10 +1,11 @@
 import torch
+from torch import nn
 import numpy as np
 
 from models import nets
 
 
-class VisualTactileAutoencoder:
+class FusionAutoencoder:
     def __init__(
         self,
         z_dim: int,
@@ -17,7 +18,7 @@ class VisualTactileAutoencoder:
         self.modality = modality
         self.device = device
 
-        self.vae = nets.ConvVAE(z_dim).to(device)
+        self.vae = self._vae()
         self.optimizer = optimizer(self.vae.parameters(), lr=lr)
 
     def train(self, front, tactile):
@@ -60,6 +61,17 @@ class VisualTactileAutoencoder:
         recon_image = np.transpose(recon[0].cpu().detach().numpy(), (1, 2, 0))
 
         return input_image, recon_image
+    
+    def _vae(self) -> nn.Module:
+        if self.modality == "concat":
+            return nets.VisualTactileVAE(self.z_dim).to(self.device)
+        elif self.modality == "vision":
+            return nets.VisualVAE(self.z_dim).to(self.device)
+        elif self.modality == "tactile":
+            return nets.TactileVAE(self.z_dim).to(self.device)
+        else:
+            raise NotImplementedError
+        
 
     def _input(self, front, tactile):
         front = front.to(self.device)

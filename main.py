@@ -7,7 +7,7 @@ import types
 import pprint
 
 from utils.data import ProjectDataset, transform_front, transform_tactile
-from models.autoencoder import VisualTactileAutoencoder
+from models.autoencoder import FusionAutoencoder
 from models.regressor import AngleRegressor
 
 
@@ -20,7 +20,7 @@ def main(config):
     )
     dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True)
 
-    vae = VisualTactileAutoencoder(
+    vae = FusionAutoencoder(
         config.vae_latent_dim, modality=config.vae_modality, lr=config.vae_lr
     )
     reg = AngleRegressor(config.vae_latent_dim, config.reg_hidden_dim, lr=config.reg_lr)
@@ -97,9 +97,10 @@ if __name__ == "__main__":
         config = yaml.safe_load(f)
         pprint.pprint(config)
 
+    config = types.SimpleNamespace(**config)
+
     if config.use_wandb:
         wandb.init(project="wm-tactile")
         wandb.config.update(config)
 
-    config = types.SimpleNamespace(**config)
     main(config)
