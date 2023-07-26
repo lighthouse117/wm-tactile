@@ -4,11 +4,11 @@ device: cuda
 
 batch_size: 64
 
-vae_epochs: 1
+vae_epochs: 200
 vae_lr: 0.001
 vae_latent_dim: 1024
-vae_modality: "tactile"
+vae_modality: "concat"
 
-reg_epochs: 1
+reg_epochs: 200
 reg_lr: 0.001
 reg_hidden_dim: 2048

@@ -32,5 +32,11 @@ class AngleRegressor:
         }
         return metrics
 
-    def test(self):
-        pass
+    def test(self, latent, angle):
+        angle = angle.to(self.device)
+        loss = self.mlp.loss(latent, angle)
+
+        metrics = {
+            "loss": loss.cpu().detach().numpy(),
+        }
+        return metrics

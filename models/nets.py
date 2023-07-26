@@ -295,3 +295,6 @@ class MLP(nn.Module):
 
         loss = nn.MSELoss()(y, target)
         return loss
+    
+    def save(self, path):
+        torch.save(self.state_dict(), path)

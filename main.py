@@ -1,10 +1,13 @@
 import numpy as np
 import wandb
 import yaml
-from torch.utils.data import DataLoader
+import torch
+from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 import types
 import pprint
+import datetime
+import os
 
 from utils.data import ProjectDataset, transform_front, transform_tactile
 from models.autoencoder import FusionAutoencoder
@@ -12,13 +15,23 @@ from models.regressor import AngleRegressor
 
 
 def main(config):
+
+    # Create result folder
+    exp_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    os.makedirs("results/" + exp_id, exist_ok=True)
+
+    # ===== Load Dataset =====
+
     dataset = ProjectDataset(
         "dataset/front",
         "dataset/tactile",
         transform_front=transform_front,
         transform_tactile=transform_tactile,
     )
-    dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True)
+
+    train_dataset, test_dataset = random_split(dataset, [len(dataset) * 0.8, len(dataset) * 0.2])
+    train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=True)
 
     vae = FusionAutoencoder(
         config.vae_latent_dim, modality=config.vae_modality, lr=config.vae_lr
@@ -33,7 +46,7 @@ def main(config):
         losses_kl = []
         losses_recon = []
 
-        for front, tactile, angle in tqdm(dataloader):
+        for front, tactile, angle in tqdm(train_dataloader):
             metrics = vae.train(front, tactile)
 
             losses_total.append(metrics["loss_total"])
@@ -45,10 +58,10 @@ def main(config):
             wandb.log(
                 {
                     "epoch": epoch,
-                    "Loss/vae_total": np.average(losses_total),
-                    "Loss/vae_kl": np.average(losses_kl),
-                    "Loss/vae_recon": np.average(losses_recon),
-                    "reconstruction": [
+                    "Train/loss_vae_total": np.average(losses_total),
+                    "Train/loss_vae_kl": np.average(losses_kl),
+                    "Train/loss_vae_recon": np.average(losses_recon),
+                    "Train/reconstruction": [
                         wandb.Image(input_image),
                         wandb.Image(recon_image),
                     ],
@@ -65,14 +78,19 @@ def main(config):
             )
         )
 
+        # Save model if the loss is lower than the best
+        if np.average(losses_total) < vae.best_loss:
+            vae.best_loss = np.average(losses_total)
+            torch.save(vae.vae.state_dict(), "results/" + exp_id + "/vae.pth")
+
     print("Finish training VAE.")
 
     # ===== Train Regressor =====
     print("Start training Regressor.")
-    for epoch in range(config.reg_epochs):
+    for epoch in range(epoch + 1, epoch + 1 + config.reg_epochs):
         losses = []
 
-        for front, tactile, angle in tqdm(dataloader):
+        for front, tactile, angle in tqdm(train_dataloader):
             latent = vae.get_latent(front, tactile)
             metrics = reg.train(latent, angle)
 
@@ -82,13 +100,47 @@ def main(config):
             wandb.log(
                 {
                     "epoch": epoch,
-                    "Loss/reg_mse": np.average(losses),
+                    "Train/loss_reg_mse": np.average(losses),
                 }
             )
 
         print("EPOCH: %d    Train Loss: %lf" % (epoch + 1, np.average(losses)))
 
+        # Save model if the loss is lower than the best
+        if np.average(losses) < reg.best_loss:
+            reg.best_loss = np.average(losses)
+            torch.save(reg.mlp.state_dict(), "results/" + exp_id + "/reg.pth")
+
     print("Finish training MLP.")
+
+
+    # ===== Test =====
+    print("Start testing.")
+    test_losses = []
+    test_accs = []
+
+    for front, tactile, angle in tqdm(test_dataloader):
+        latent = vae.get_latent(front, tactile)
+        metrics = reg.test(latent, angle)
+
+        test_losses.append(metrics["loss"])
+        test_accs.append(metrics["acc"])
+
+    if config.use_wandb:
+        input_image, recon_image = vae.report_images(front, tactile)
+        wandb.log(
+            {
+                "Test/loss_reg_mse": np.average(test_losses),
+                "Test/reconstruction": [
+                    wandb.Image(input_image),
+                    wandb.Image(recon_image),
+                ],
+                
+            }
+        )
+
+    print("Test Loss: %lf" % np.average(test_losses))
+
 
 
 if __name__ == "__main__":

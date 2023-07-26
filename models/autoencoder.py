@@ -21,6 +21,8 @@ class FusionAutoencoder:
         self.vae = self._vae()
         self.optimizer = optimizer(self.vae.parameters(), lr=lr)
 
+        self.best_loss = np.inf
+
     def train(self, front, tactile):
         x = self._input(front, tactile)
 
@@ -49,6 +51,14 @@ class FusionAutoencoder:
             z = self.vae.get_z(x)
 
         return z
+    
+    def get_recon(self, front, tactile):
+        x = self._input(front, tactile)
+
+        with torch.no_grad():
+            recon, _, _ = self.vae(x)
+
+        return recon
 
     def report_images(self, front, tactile):
         x = self._input(front, tactile)
