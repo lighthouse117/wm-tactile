@@ -2,41 +2,65 @@ import numpy as np
 import wandb
 import yaml
 import torch
-from torch.utils.data import DataLoader, random_split
-from tqdm import tqdm
 import types
 import pprint
-import datetime
 import os
+from torch.utils.data import DataLoader, random_split
+from tqdm import tqdm
+from datetime import datetime, timezone, timedelta
 
 from utils.data import ProjectDataset, transform_front, transform_tactile
 from models.autoencoder import FusionAutoencoder
 from models.regressor import AngleRegressor
+from utils.modality import Modality
+from utils.images import imsave_numpy, imsave_pil, imsave_torch, UnNormalize
 
 
 def main(config):
-
     # Create result folder
-    exp_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    exp_id = datetime.now(timezone(timedelta(hours=9))).strftime("%Y%m%d_%H%M%S")
     os.makedirs("results/" + exp_id, exist_ok=True)
 
     # ===== Load Dataset =====
 
+    dataset_path = f"dataset/{config.vision_view}-view"
+
     dataset = ProjectDataset(
-        "dataset/front",
-        "dataset/tactile",
+        dataset_path + "/front",
+        dataset_path + "/tactile",
         transform_front=transform_front,
         transform_tactile=transform_tactile,
     )
 
-    train_dataset, test_dataset = random_split(dataset, [len(dataset) * 0.8, len(dataset) * 0.2])
-    train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=True)
+    train_size = int(len(dataset) * 0.8)
+    test_size = int(len(dataset) * 0.2)
+
+    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    train_dataloader = DataLoader(
+        train_dataset, batch_size=config.batch_size, shuffle=True
+    )
+    test_dataloader = DataLoader(
+        test_dataset, batch_size=config.batch_size, shuffle=True
+    )
 
     vae = FusionAutoencoder(
-        config.vae_latent_dim, modality=config.vae_modality, lr=config.vae_lr
+        config.vae_latent_dim,
+        modality=Modality(config.vae_modality),
+        lr=config.vae_lr,
     )
-    reg = AngleRegressor(config.vae_latent_dim, config.reg_hidden_dim, lr=config.reg_lr)
+    reg = AngleRegressor(
+        config.vae_latent_dim,
+        config.reg_hidden_dim,
+        lr=config.reg_lr,
+    )
+
+    unnorm = UnNormalize(mean=0.5, std=0.5)
+
+    front, tactile, angle = next(iter(train_dataloader))
+    # imsave_torch(torch.concat((front, tactile), dim=0), "results/" + exp_id + "/input.png")
+    # imsave_torch(tactile, "results/" + exp_id + "/tactile.png")
+    # imsave_torch(front, "results/" + exp_id + "/front.png")
+    # return
 
     # ===== Train VAE =====
 
@@ -64,6 +88,8 @@ def main(config):
                     "Train/reconstruction": [
                         wandb.Image(input_image),
                         wandb.Image(recon_image),
+                        # wandb.Image(unnorm(input_image)),
+                        # wandb.Image(unnorm(recon_image)),
                     ],
                 }
             )
@@ -82,6 +108,7 @@ def main(config):
         if np.average(losses_total) < vae.best_loss:
             vae.best_loss = np.average(losses_total)
             torch.save(vae.vae.state_dict(), "results/" + exp_id + "/vae.pth")
+            print("Saved vae.pth")
 
     print("Finish training VAE.")
 
@@ -110,9 +137,9 @@ def main(config):
         if np.average(losses) < reg.best_loss:
             reg.best_loss = np.average(losses)
             torch.save(reg.mlp.state_dict(), "results/" + exp_id + "/reg.pth")
+            print("Saved reg.pth")
 
     print("Finish training MLP.")
-
 
     # ===== Test =====
     print("Start testing.")
@@ -124,7 +151,6 @@ def main(config):
         metrics = reg.test(latent, angle)
 
         test_losses.append(metrics["loss"])
-        test_accs.append(metrics["acc"])
 
     if config.use_wandb:
         input_image, recon_image = vae.report_images(front, tactile)
@@ -132,15 +158,13 @@ def main(config):
             {
                 "Test/loss_reg_mse": np.average(test_losses),
                 "Test/reconstruction": [
-                    wandb.Image(input_image),
-                    wandb.Image(recon_image),
+                    wandb.Image(unnorm(input_image)),
+                    wandb.Image(unnorm(recon_image)),
                 ],
-                
             }
         )
 
     print("Test Loss: %lf" % np.average(test_losses))
-
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 from models import nets
 
@@ -18,6 +19,8 @@ class AngleRegressor:
 
         self.mlp = nets.MLP(z_dim, hidden_dim, 1).to(device)
         self.optimizer = optimizer(self.mlp.parameters(), lr=lr)
+
+        self.best_loss = np.inf
 
     def train(self, latent, angle):
         angle = angle.to(self.device)

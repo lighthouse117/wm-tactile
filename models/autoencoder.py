@@ -1,15 +1,17 @@
 import torch
 from torch import nn
 import numpy as np
+import enum
 
 from models import nets
+from utils.modality import Modality
 
 
 class FusionAutoencoder:
     def __init__(
         self,
         z_dim: int,
-        modality="concat",
+        modality: Modality = Modality.CONCAT,
         lr=1e-3,
         optimizer=torch.optim.Adam,
         device="cuda",
@@ -73,11 +75,11 @@ class FusionAutoencoder:
         return input_image, recon_image
     
     def _vae(self) -> nn.Module:
-        if self.modality == "concat":
+        if self.modality == Modality.CONCAT:
             return nets.VisualTactileVAE(self.z_dim).to(self.device)
-        elif self.modality == "vision":
+        elif self.modality == Modality.VISION:
             return nets.VisualVAE(self.z_dim).to(self.device)
-        elif self.modality == "tactile":
+        elif self.modality == Modality.TACTILE:
             return nets.TactileVAE(self.z_dim).to(self.device)
         else:
             raise NotImplementedError
@@ -87,11 +89,11 @@ class FusionAutoencoder:
         front = front.to(self.device)
         tactile = tactile.to(self.device)
 
-        if self.modality == "concat":
+        if self.modality == Modality.CONCAT:
             x = torch.cat([front, tactile], dim=-1)
-        elif self.modality == "vision":
+        elif self.modality == Modality.VISION:
             x = front
-        elif self.modality == "tactile":
+        elif self.modality == Modality.TACTILE:
             x = tactile
         else:
             raise NotImplementedError

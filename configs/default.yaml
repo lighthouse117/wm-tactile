@@ -4,11 +4,17 @@ device: cuda
 
 batch_size: 64
 
-vae_epochs: 200
+# vision_view: front
+vision_view: side
+
+vae_epochs: 100
 vae_lr: 0.001
 vae_latent_dim: 1024
-vae_modality: "concat"
 
-reg_epochs: 200
+vae_modality: concat
+# vae_modality: vision
+# vae_modality: tactile
+
+reg_epochs: 100
 reg_lr: 0.001
 reg_hidden_dim: 2048

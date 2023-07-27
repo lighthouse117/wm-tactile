@@ -2,13 +2,17 @@ from PIL import Image
 import glob
 import os
 from torch.utils.data import Dataset
-from torchvision import datasets, transforms, models
+from torchvision import transforms
+from torchvision.transforms import functional as F
+
+from utils.images import SubtractTactileBG, AdjustBrightnessAndContrast
 
 
 transform_front = transforms.Compose(
     [
         transforms.ToTensor(),
         transforms.CenterCrop(80),
+        # transforms.Grayscale(num_output_channels=1),
         transforms.Normalize(
             mean=[0.5, 0.5, 0.5],
             std=[0.5, 0.5, 0.5],
@@ -18,8 +22,10 @@ transform_front = transforms.Compose(
 
 transform_tactile = transforms.Compose(
     [
-        transforms.Resize((80, 60)),
         transforms.ToTensor(),
+        # SubtractTactileBG("dataset/tactile_bg.png"),
+        # AdjustBrightnessAndContrast(brightness_factor=2, contrast_factor=3),
+        transforms.Resize((80, 60)),
         transforms.Normalize(
             mean=[0.5, 0.5, 0.5],
             std=[0.5, 0.5, 0.5],
