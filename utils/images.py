@@ -54,6 +54,15 @@ class AdjustBrightnessAndContrast(object):
             brightness_factor=self.brightness_factor,
         )
 
+
+class MinMaxNormalize(object):
+    def __call__(self, img):
+        # Normalize image to [0, 1]
+        img = img - torch.min(img)
+        img = img / torch.max(img)
+        return img
+
+
 class UnNormalize(object):
     def __init__(self, mean, std):
         self.mean = mean

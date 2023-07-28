@@ -33,9 +33,10 @@ def main(config):
     )
 
     train_size = int(len(dataset) * 0.8)
-    test_size = int(len(dataset) * 0.2)
 
-    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+    train_dataset, test_dataset = random_split(
+        dataset, [train_size, len(dataset) - train_size]
+    )
     train_dataloader = DataLoader(
         train_dataset, batch_size=config.batch_size, shuffle=True
     )
@@ -56,8 +57,7 @@ def main(config):
 
     unnorm = UnNormalize(mean=0.5, std=0.5)
 
-    front, tactile, angle = next(iter(train_dataloader))
-    # imsave_torch(torch.concat((front, tactile), dim=0), "results/" + exp_id + "/input.png")
+    # front, tactile, angle = next(iter(train_dataloader))
     # imsave_torch(tactile, "results/" + exp_id + "/tactile.png")
     # imsave_torch(front, "results/" + exp_id + "/front.png")
     # return
@@ -158,8 +158,10 @@ def main(config):
             {
                 "Test/loss_reg_mse": np.average(test_losses),
                 "Test/reconstruction": [
-                    wandb.Image(unnorm(input_image)),
-                    wandb.Image(unnorm(recon_image)),
+                    wandb.Image(input_image),
+                    wandb.Image(recon_image),
+                    # wandb.Image(unnorm(input_image)),
+                    # wandb.Image(unnorm(recon_image)),
                 ],
             }
         )

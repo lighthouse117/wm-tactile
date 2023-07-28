@@ -72,7 +72,7 @@ class VisualTactileVAE(nn.Module):
         # KL loss(正則化項)の計算. mean, stdは (batch_size , z_dim)
         # torch.sumは上式のJ(=z_dim)に関するもの. torch.meanはbatch_sizeに関するものなので,
         # 上式には書いてありません.
-        KL = -0.5 * torch.mean(
+        KL = -0.001 * torch.mean(
             torch.sum(1 + torch_log(std**2) - mean**2 - std**2, dim=1)
         )
 
@@ -91,6 +91,7 @@ class VisualTactileVAE(nn.Module):
         mu, logvar = self._encoder(x)
         z = self._sample_z(mu, logvar)
         return z
+
 
 class VisualVAE(nn.Module):
     def __init__(self, z_dim: int) -> None:
@@ -159,7 +160,7 @@ class VisualVAE(nn.Module):
         # KL loss(正則化項)の計算. mean, stdは (batch_size , z_dim)
         # torch.sumは上式のJ(=z_dim)に関するもの. torch.meanはbatch_sizeに関するものなので,
         # 上式には書いてありません.
-        KL = -0.5 * torch.mean(
+        KL = -0.001 * torch.mean(
             torch.sum(1 + torch_log(std**2) - mean**2 - std**2, dim=1)
         )
 
@@ -247,7 +248,7 @@ class TactileVAE(nn.Module):
         # KL loss(正則化項)の計算. mean, stdは (batch_size , z_dim)
         # torch.sumは上式のJ(=z_dim)に関するもの. torch.meanはbatch_sizeに関するものなので,
         # 上式には書いてありません.
-        KL = -0.5 * torch.mean(
+        KL = -0.001 * torch.mean(
             torch.sum(1 + torch_log(std**2) - mean**2 - std**2, dim=1)
         )
 
@@ -295,6 +296,6 @@ class MLP(nn.Module):
 
         loss = nn.MSELoss()(y, target)
         return loss
-    
+
     def save(self, path):
         torch.save(self.state_dict(), path)

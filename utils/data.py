@@ -5,13 +5,15 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.transforms import functional as F
 
-from utils.images import SubtractTactileBG, AdjustBrightnessAndContrast
+from utils.images import SubtractTactileBG, AdjustBrightnessAndContrast, MinMaxNormalize
 
 
 transform_front = transforms.Compose(
     [
         transforms.ToTensor(),
         transforms.CenterCrop(80),
+        # transforms.CenterCrop(100),
+        # transforms.Resize((80, 80)),
         # transforms.Grayscale(num_output_channels=1),
         transforms.Normalize(
             mean=[0.5, 0.5, 0.5],
@@ -23,8 +25,9 @@ transform_front = transforms.Compose(
 transform_tactile = transforms.Compose(
     [
         transforms.ToTensor(),
-        # SubtractTactileBG("dataset/tactile_bg.png"),
-        # AdjustBrightnessAndContrast(brightness_factor=2, contrast_factor=3),
+        SubtractTactileBG("dataset/tactile_bg.png"),
+        MinMaxNormalize(),
+        AdjustBrightnessAndContrast(brightness_factor=2, contrast_factor=3),
         transforms.Resize((80, 60)),
         transforms.Normalize(
             mean=[0.5, 0.5, 0.5],
@@ -46,6 +49,8 @@ class ProjectDataset(Dataset):
         self.tactile_paths = sorted(glob.glob(os.path.join(tactile_dir, "*.png")))
 
         # Ensure the number of images in both directories are the same
+        print(f"Found {len(self.front_paths)} front images.")
+        print(f"Found {len(self.tactile_paths)} tactile images.")
         assert len(self.front_paths) == len(self.tactile_paths)
 
     def __len__(self):
