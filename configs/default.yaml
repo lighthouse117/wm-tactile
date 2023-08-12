@@ -1,8 +1,8 @@
-use_wandb: True
+use_wandb: false
 
 device: cuda
 
-batch_size: 64
+batch_size: 32
 
 vision_view: front
 # vision_view: side
@@ -18,3 +18,8 @@ vae_modality: concat
 reg_epochs: 50
 reg_lr: 0.001
 reg_hidden_dim: 2048
+
+remove_tactile_bg: True
+
+aif_decoder_epochs: 10
+aif_decoder_lr: 0.001

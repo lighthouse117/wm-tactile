@@ -1,6 +1,7 @@
 from PIL import Image
 import glob
 import os
+import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.transforms import functional as F
@@ -24,15 +25,17 @@ transform_front = transforms.Compose(
 
 transform_tactile = transforms.Compose(
     [
-        transforms.ToTensor(),
-        SubtractTactileBG("dataset/tactile_bg.png"),
+        # transforms.ToTensor(),
+        # SubtractTactileBG("dataset/tactile_bg.png"),
         MinMaxNormalize(),
         AdjustBrightnessAndContrast(brightness_factor=2, contrast_factor=3),
-        transforms.Resize((80, 60)),
-        transforms.Normalize(
-            mean=[0.5, 0.5, 0.5],
-            std=[0.5, 0.5, 0.5],
-        ),
+        transforms.Grayscale(num_output_channels=1),
+        # transforms.Resize((80, 60)),
+        transforms.Resize((56, 80), antialias=True),
+        # transforms.Normalize(
+        #     mean=[0.5, 0.5, 0.5],
+        #     std=[0.5, 0.5, 0.5],
+        # ),
     ]
 )
 
@@ -72,3 +75,45 @@ class ProjectDataset(Dataset):
             tactile_img = self.transform_tactile(tactile_img)
 
         return front_img, tactile_img, label
+
+
+class TactileRGBDataset(Dataset):
+    def __init__(
+        self,
+        dir,
+        transform=None,
+        bg_path=None,
+        remove_bg=False,
+    ):
+        self.transform = transform
+        self.bg_path = bg_path
+        self.remove_bg = remove_bg
+
+        # Get all image paths from the specified directories
+        self.tactile_paths = sorted(glob.glob(os.path.join(dir + "/tactile", "*.png")))
+        print(f"Found {len(self.tactile_paths)} tactile images.")
+
+    def __len__(self):
+        return len(self.tactile_paths)
+
+    def __getitem__(self, index):
+        # Load image
+        tactile_img = transforms.ToTensor()(Image.open(self.tactile_paths[index]))
+
+        # Extract label from the filename
+        angle = float(
+            os.path.basename(self.tactile_paths[index])
+            .split("_")[-1]
+            .replace(".png", "")
+        )
+        angle = torch.unsqueeze(torch.tensor(angle), 0)
+
+        # Remove background
+        if self.remove_bg:
+            tactile_img = SubtractTactileBG(self.bg_path)(tactile_img)
+
+        # Apply transformations (if any)
+        if self.transform:
+            tactile_img = self.transform(tactile_img)
+
+        return angle, tactile_img
