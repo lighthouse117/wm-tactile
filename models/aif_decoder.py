@@ -28,6 +28,7 @@ class AIFDecoder:
         latent = latent.to(self.device)
         target_image = target_image.to(self.device)
 
+        self.conv_decoder.train()
         output_image = self.conv_decoder(latent)
         loss = self.criterion(output_image, target_image)
 
@@ -42,6 +43,8 @@ class AIFDecoder:
 
     def report_images(self, latent, target_image):
         latent = latent.to(self.device)
+
+        self.conv_decoder.eval()
         with torch.no_grad():
             output_images = self.conv_decoder(latent).cpu().detach()
 
@@ -57,10 +60,11 @@ class AIFDecoder:
 
         return result_images
 
-    def test(self, latent, target_image):
+    def test_with_loss(self, latent, target_image):
         latent = latent.to(self.device)
         target_image = target_image.to(self.device)
 
+        self.conv_decoder.eval()
         with torch.no_grad():
             output_image = self.conv_decoder(latent)
 
@@ -70,6 +74,15 @@ class AIFDecoder:
             "loss": loss.cpu().detach().numpy(),
         }
         return metrics
+
+    def test_images(self, latent):
+        latent = latent.to(self.device)
+
+        self.conv_decoder.eval()
+        with torch.no_grad():
+            output_images = self.conv_decoder(latent)
+
+        return output_images.cpu().detach()
 
 
 class ConvDecoder(nn.Module):
